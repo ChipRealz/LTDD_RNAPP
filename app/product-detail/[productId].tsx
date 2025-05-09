@@ -1,6 +1,7 @@
-import { useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import api from '../utils/api';
 
 interface Product {
@@ -15,8 +16,12 @@ interface Product {
 
 export default function ProductDetailScreen() {
   const { productId } = useLocalSearchParams();
+  const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [quantity, setQuantity] = useState(1);
+  const [adding, setAdding] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -32,6 +37,30 @@ export default function ProductDetailScreen() {
     fetchProduct();
   }, [productId]);
 
+  useEffect(() => {
+    const fetchCartCount = async () => {
+      try {
+        const res = await api.get('/cart');
+        setCartCount(res.data?.items?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0);
+      } catch {}
+    };
+    fetchCartCount();
+  }, []);
+
+  const handleAddToCart = async () => {
+    if (!product) return;
+    setAdding(true);
+    try {
+      // You may need to add authentication headers to api.post
+      await api.post('/cart/add', { productId: product._id, quantity });
+      Alert.alert('Success', 'Product added to cart!');
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.message || 'Could not add to cart');
+    } finally {
+      setAdding(false);
+    }
+  };
+
   if (loading) {
     return <ActivityIndicator style={{ flex: 1, marginTop: 40 }} />;
   }
@@ -41,6 +70,20 @@ export default function ProductDetailScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      {/* Top Bar */}
+      <View style={styles.detailTopBar}>
+        <TouchableOpacity onPress={() => router.replace('/') /* or router.back() */}>
+          <Ionicons name="arrow-back" size={28} color="#333" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.detailCartIcon} onPress={() => router.push('/cart')}>
+          <Ionicons name="cart-outline" size={26} color="#333" />
+          {cartCount > 0 && (
+            <View style={styles.cartBadge}>
+              <Text style={styles.cartBadgeText}>{cartCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
       {product.image && (
         <Image source={{ uri: product.image }} style={styles.image} />
       )}
@@ -53,6 +96,32 @@ export default function ProductDetailScreen() {
       {typeof product.stockQuantity === 'number' && (
         <Text style={styles.quantity}>Quantity in stock: {product.stockQuantity}</Text>
       )}
+      {/* Quantity Selector */}
+      <View style={styles.qtyRow}>
+        <TouchableOpacity
+          style={styles.qtyBtn}
+          onPress={() => setQuantity(q => Math.max(1, q - 1))}
+          disabled={quantity <= 1 || adding}
+        >
+          <Text style={styles.qtyBtnText}>-</Text>
+        </TouchableOpacity>
+        <Text style={styles.qtyValue}>{quantity}</Text>
+        <TouchableOpacity
+          style={styles.qtyBtn}
+          onPress={() => setQuantity(q => product.stockQuantity ? Math.min(product.stockQuantity, q + 1) : q + 1)}
+          disabled={product.stockQuantity ? quantity >= product.stockQuantity : false || adding}
+        >
+          <Text style={styles.qtyBtnText}>+</Text>
+        </TouchableOpacity>
+      </View>
+      {/* Add to Cart Button */}
+      <TouchableOpacity
+        style={[styles.addCartBtn, adding && { opacity: 0.6 }]}
+        onPress={handleAddToCart}
+        disabled={adding}
+      >
+        <Text style={styles.addCartBtnText}>{adding ? 'Adding...' : 'Add to Cart'}</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -100,5 +169,77 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  qtyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 18,
+    marginBottom: 10,
+    justifyContent: 'center',
+  },
+  qtyBtn: {
+    backgroundColor: '#eee',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    marginHorizontal: 10,
+  },
+  qtyBtnText: {
+    fontSize: 22,
+    color: '#4a90e2',
+    fontWeight: 'bold',
+  },
+  qtyValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#222',
+    minWidth: 32,
+    textAlign: 'center',
+  },
+  addCartBtn: {
+    backgroundColor: '#4a90e2',
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    marginTop: 16,
+    alignItems: 'center',
+    alignSelf: 'center',
+    minWidth: 180,
+  },
+  addCartBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  detailTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingTop: 36,
+    paddingBottom: 10,
+    paddingHorizontal: 10,
+    backgroundColor: '#fff',
+  },
+  detailCartIcon: {
+    marginLeft: 8,
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#f90',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    zIndex: 2,
+  },
+  cartBadgeText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 12,
   },
 }); 

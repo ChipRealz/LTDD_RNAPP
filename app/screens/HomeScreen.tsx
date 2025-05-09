@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { RefObject, useCallback, useEffect, useRef, useState } from 'react';
+import { router } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Keyboard, Modal, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ProductSlideShow from '../components/ProductSlideShow';
 import api from '../utils/api';
@@ -17,179 +17,6 @@ interface Category {
   name: string;
 }
 
-interface HeaderProps {
-  search: string;
-  setSearch: (text: string) => void;
-  categories: Category[];
-  activeCategory: string | null;
-  setActiveCategory: (categoryId: string | null) => void;
-  tabListRef: React.RefObject<FlatList>;
-  topProducts: Product[];
-  loadingTop: boolean;
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
-  setPage: (page: number) => void;
-  setAllProducts: (products: Product[]) => void;
-  fetchAllProducts: (page: number, searchText?: string) => void;
-}
-
-// Memoized Header Component
-const HeaderComponent = React.memo(
-  ({
-    search,
-    setSearch,
-    categories,
-    activeCategory,
-    setActiveCategory,
-    tabListRef,
-    topProducts,
-    loadingTop,
-    searchQuery,
-    setSearchQuery,
-    setPage,
-    setAllProducts,
-    fetchAllProducts,
-  }: HeaderProps) => {
-    const [localSearch, setLocalSearch] = useState(search); // Local state for TextInput
-    const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-    // Handle search input with debounce
-    const handleSearch = useCallback(
-      (text: string) => {
-        setLocalSearch(text);
-        setSearch(text); // Update parent search state
-        if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-        searchTimeoutRef.current = setTimeout(() => {
-          setSearchQuery(text);
-          setPage(1);
-          if (!activeCategory) {
-            setAllProducts([]);
-          }
-        }, 800);
-      },
-      [setSearch, setSearchQuery, setPage, setAllProducts, activeCategory]
-    );
-
-    // Cleanup timeout on unmount
-    useEffect(() => {
-      return () => {
-        if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-      };
-    }, []);
-
-    return (
-      <>
-        <View style={styles.topBar}>
-          <TouchableOpacity>
-            <Ionicons name="arrow-back" size={28} color="#333" />
-          </TouchableOpacity>
-          <View style={styles.searchRow}>
-            <TextInput
-              style={styles.searchBar}
-              placeholder="search"
-              placeholderTextColor="#888"
-              value={localSearch}
-              onChangeText={handleSearch}
-              textAlign="left"
-              multiline={false}
-              maxLength={200}
-              textAlignVertical="center"
-              blurOnSubmit={false}
-              returnKeyType="search"
-              onSubmitEditing={() => {
-                setSearchQuery(localSearch);
-                setPage(1);
-                if (!activeCategory) {
-                  setAllProducts([]);
-                }
-              }}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="default"
-              clearButtonMode="while-editing"
-            />
-          </View>
-          <TouchableOpacity style={styles.iconButton}>
-            <Ionicons name="notifications-outline" size={24} color="#333" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.avatarButton}>
-            <View style={styles.avatar} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={{ backgroundColor: '#e6f2ff' }}>
-          <FlatList
-            ref={tabListRef}
-            data={categories}
-            keyExtractor={item => item._id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabList}
-            renderItem={({ item, index }) => (
-              <TouchableOpacity
-                style={[styles.tab, activeCategory === item._id && styles.activeTab]}
-                onPress={() => {
-                  if (activeCategory === item._id) {
-                    setActiveCategory(null);
-                    setPage(1);
-                    fetchAllProducts(1, searchQuery);
-                  } else {
-                    setActiveCategory(item._id);
-                  }
-                  if (tabListRef.current) {
-                    tabListRef.current.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
-                  }
-                }}
-              >
-                <Text style={[styles.tabText, activeCategory === item._id && styles.activeTabText]}>
-                  {item.name}
-                </Text>
-              </TouchableOpacity>
-            )}
-            style={styles.tabFlatList}
-            getItemLayout={(_, index) => ({ length: 90, offset: 90 * index, index })}
-          />
-        </View>
-
-        <View style={styles.slideShow}>
-          <ProductSlideShow />
-        </View>
-
-        <View style={styles.top10}>
-          <Text style={styles.sectionText}>10 sản phẩm bán chạy</Text>
-          {loadingTop ? (
-            <ActivityIndicator size="small" style={{ marginTop: 8 }} />
-          ) : (
-            <FlatList
-              data={topProducts}
-              keyExtractor={item => item._id}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingVertical: 8 }}
-              renderItem={({ item }) => (
-                <View style={styles.topProductCard}>
-                  {item.image && (
-                    <Image source={{ uri: item.image }} style={styles.topProductImage} />
-                  )}
-                  <Text style={styles.topProductName} numberOfLines={1}>{item.name}</Text>
-                  <Text style={styles.topProductPrice}>${item.price}</Text>
-                </View>
-              )}
-            />
-          )}
-        </View>
-      </>
-    );
-  }
-);
-
-// Define the navigation type for the stack
-// Adjust the type if your navigator uses a different name or structure
-type RootStackParamList = {
-  Home: undefined;
-  ProductDetail: { productId: string };
-};
-
 export default function HomeScreen() {
   // States
   const [categories, setCategories] = useState<Category[]>([]);
@@ -200,14 +27,12 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [topProducts, setTopProducts] = useState<Product[]>([]);
   const [loadingTop, setLoadingTop] = useState(true);
-  
   // Lazy loading states
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loadingAll, setLoadingAll] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const ITEMS_PER_PAGE = 10;
-
   const tabListRef = useRef<FlatList>(null);
   const [filterVisible, setFilterVisible] = useState(false);
   const [minPrice, setMinPrice] = useState('');
@@ -215,8 +40,7 @@ export default function HomeScreen() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [applyingFilter, setApplyingFilter] = useState(false);
   const [lastFilter, setLastFilter] = useState({ minPrice: '', maxPrice: '', sortOrder: 'asc' });
-
-  const router = useRouter();
+  const [cartCount, setCartCount] = useState(0);
 
   // Fetch categories
   useEffect(() => {
@@ -270,7 +94,7 @@ export default function HomeScreen() {
     fetchTopProducts();
   }, []);
 
-  // Modified fetchAllProducts to accept min/max price and sort order
+  // Fetch all products with lazy loading and search
   const fetchAllProducts = useCallback(
     async (
       pageNum: number,
@@ -351,6 +175,140 @@ export default function HomeScreen() {
     const cleaned = text.replace(/[^0-9]/g, '');
     setMaxPrice(cleaned);
   };
+
+  useEffect(() => {
+    const fetchCartCount = async () => {
+      try {
+        const res = await api.get('/cart');
+        setCartCount(res.data?.items?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0);
+      } catch {}
+    };
+    fetchCartCount();
+  }, []);
+
+  // Debounced search handler
+  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+  const handleSearch = (text: string) => {
+    setSearch(text);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => {
+      setSearchQuery(text);
+      setPage(1);
+      if (!activeCategory) {
+        setAllProducts([]);
+      }
+    }, 800);
+  };
+
+  // Header
+  const renderHeader = () => (
+    <>
+      <View style={styles.topBar}>
+        <TouchableOpacity>
+          <Ionicons name="arrow-back" size={28} color="#333" />
+        </TouchableOpacity>
+        <View style={styles.searchRow}>
+          <TextInput
+            style={styles.searchBar}
+            placeholder="search"
+            placeholderTextColor="#888"
+            value={search}
+            onChangeText={handleSearch}
+            textAlign="left"
+            multiline={false}
+            maxLength={200}
+            textAlignVertical="center"
+            blurOnSubmit={false}
+            returnKeyType="search"
+            onSubmitEditing={() => {
+              setSearchQuery(search);
+              setPage(1);
+              if (!activeCategory) {
+                setAllProducts([]);
+              }
+            }}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="default"
+            clearButtonMode="while-editing"
+          />
+        </View>
+        <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/cart")}>
+          <Ionicons name="cart-outline" size={26} color="#333" />
+          {typeof cartCount === 'number' && cartCount > 0 && (
+            <View style={styles.cartBadge}>
+              <Text style={styles.cartBadgeText}>{cartCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.avatarButton}>
+          <View style={styles.avatar} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={{ backgroundColor: '#e6f2ff' }}>
+        <FlatList
+          ref={tabListRef}
+          data={categories}
+          keyExtractor={item => item._id}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabList}
+          renderItem={({ item, index }) => (
+            <TouchableOpacity
+              style={[styles.tab, activeCategory === item._id && styles.activeTab]}
+              onPress={() => {
+                if (activeCategory === item._id) {
+                  setActiveCategory(null);
+                  setPage(1);
+                  fetchAllProducts(1, searchQuery);
+                } else {
+                  setActiveCategory(item._id);
+                }
+                if (tabListRef.current) {
+                  tabListRef.current.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
+                }
+              }}
+            >
+              <Text style={[styles.tabText, activeCategory === item._id && styles.activeTabText]}>
+                {item.name}
+              </Text>
+            </TouchableOpacity>
+          )}
+          style={styles.tabFlatList}
+          getItemLayout={(_, index) => ({ length: 90, offset: 90 * index, index })}
+        />
+      </View>
+
+      <View style={styles.slideShow}>
+        <ProductSlideShow />
+      </View>
+
+      <View style={styles.top10}>
+        <Text style={styles.sectionText}>10 sản phẩm bán chạy</Text>
+        {loadingTop ? (
+          <ActivityIndicator size="small" style={{ marginTop: 8 }} />
+        ) : (
+          <FlatList
+            data={topProducts}
+            keyExtractor={item => item._id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingVertical: 8 }}
+            renderItem={({ item }) => (
+              <View style={styles.topProductCard}>
+                {item.image && (
+                  <Image source={{ uri: item.image }} style={styles.topProductImage} />
+                )}
+                <Text style={styles.topProductName} numberOfLines={1}>{item.name}</Text>
+                <Text style={styles.topProductPrice}>${item.price}</Text>
+              </View>
+            )}
+          />
+        )}
+      </View>
+    </>
+  );
 
   return (
     <View style={styles.container}>
@@ -449,23 +407,7 @@ export default function HomeScreen() {
       <FlatList
         data={activeCategory ? products : allProducts}
         keyExtractor={(item, index) => `${item._id}-${index}`}
-        ListHeaderComponent={
-          <HeaderComponent
-            search={search}
-            setSearch={setSearch}
-            categories={categories}
-            activeCategory={activeCategory}
-            setActiveCategory={setActiveCategory}
-            tabListRef={tabListRef as RefObject<FlatList<any>>}
-            topProducts={topProducts}
-            loadingTop={loadingTop}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            setPage={setPage}
-            setAllProducts={setAllProducts}
-            fetchAllProducts={fetchAllProducts}
-          />
-        }
+        ListHeaderComponent={renderHeader}
         renderItem={({ item }) => (
           <TouchableOpacity onPress={() => router.push({ pathname: '/product-detail/[productId]', params: { productId: item._id } })}>
             <View style={styles.productCard}>
@@ -797,5 +739,23 @@ const styles = StyleSheet.create({
     color: '#4a90e2',
     fontWeight: 'bold',
     fontSize: 15,
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#f90',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    zIndex: 2,
+  },
+  cartBadgeText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 12,
   },
 });
