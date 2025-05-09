@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { RefObject, useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Keyboard, Modal, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ProductSlideShow from '../components/ProductSlideShow';
 import api from '../utils/api';
 
@@ -201,6 +201,12 @@ export default function HomeScreen() {
   const ITEMS_PER_PAGE = 10;
 
   const tabListRef = useRef<FlatList>(null);
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [applyingFilter, setApplyingFilter] = useState(false);
+  const [lastFilter, setLastFilter] = useState({ minPrice: '', maxPrice: '', sortOrder: 'asc' });
 
   // Fetch categories
   useEffect(() => {
@@ -254,32 +260,42 @@ export default function HomeScreen() {
     fetchTopProducts();
   }, []);
 
-  // Fetch all products with lazy loading and search
+  // Modified fetchAllProducts to accept min/max price and sort order
   const fetchAllProducts = useCallback(
-    async (pageNum: number, searchText: string = '') => {
+    async (
+      pageNum: number,
+      searchText: string = '',
+      min: string = minPrice,
+      max: string = maxPrice,
+      order: 'asc' | 'desc' = sortOrder
+    ) => {
       try {
         setLoadingAll(true);
-        const res = await api.get('/product', {
-          params: {
-            page: pageNum,
-            limit: ITEMS_PER_PAGE,
-            sort: 'price',
-            order: 'asc',
-            search: searchText.trim(),
-          },
-        });
-
+        const params: any = {
+          page: pageNum,
+          limit: ITEMS_PER_PAGE,
+          sort: 'price',
+          order,
+          search: searchText.trim(),
+        };
+        if (min) params.minPrice = min;
+        if (max) params.maxPrice = max;
+        const res = await api.get('/product', { params });
         const newProducts = res.data;
+        let sortedProducts = [...newProducts];
+        sortedProducts.sort((a, b) => {
+          if (order === 'asc') return a.price - b.price;
+          return b.price - a.price;
+        });
         if (pageNum === 1) {
-          setAllProducts(newProducts);
+          setAllProducts(sortedProducts);
         } else {
           setAllProducts(prev => {
             const existingIds = new Set(prev.map((p: Product) => p._id));
-            const uniqueNewProducts = newProducts.filter((p: Product) => !existingIds.has(p._id));
+            const uniqueNewProducts = sortedProducts.filter((p: Product) => !existingIds.has(p._id));
             return [...prev, ...uniqueNewProducts];
           });
         }
-
         setHasMore(newProducts.length === ITEMS_PER_PAGE);
       } catch (e) {
         console.error('Error fetching products:', e);
@@ -287,8 +303,15 @@ export default function HomeScreen() {
         setLoadingAll(false);
       }
     },
-    []
+    [minPrice, maxPrice, sortOrder]
   );
+
+  // Update useEffect to use min/max price and sort order
+  useEffect(() => {
+    if (!activeCategory) {
+      fetchAllProducts(1, searchQuery, minPrice, maxPrice, sortOrder);
+    }
+  }, [searchQuery, activeCategory, fetchAllProducts, minPrice, maxPrice, sortOrder]);
 
   // Initial load of all products
   useEffect(() => {
@@ -302,12 +325,117 @@ export default function HomeScreen() {
     if (!loadingAll && hasMore && !activeCategory) {
       const nextPage = page + 1;
       setPage(nextPage);
-      fetchAllProducts(nextPage, searchQuery);
+      fetchAllProducts(nextPage, searchQuery, minPrice, maxPrice, sortOrder);
     }
-  }, [loadingAll, hasMore, activeCategory, page, fetchAllProducts, searchQuery]);
+  }, [loadingAll, hasMore, activeCategory, page, fetchAllProducts, searchQuery, minPrice, maxPrice, sortOrder]);
+
+  // Helper to check if filter changed
+  const filterChanged = minPrice !== lastFilter.minPrice || maxPrice !== lastFilter.maxPrice || sortOrder !== lastFilter.sortOrder;
+
+  // Numeric input only for price fields
+  const handleMinPrice = (text: string) => {
+    const cleaned = text.replace(/[^0-9]/g, '');
+    setMinPrice(cleaned);
+  };
+  const handleMaxPrice = (text: string) => {
+    const cleaned = text.replace(/[^0-9]/g, '');
+    setMaxPrice(cleaned);
+  };
 
   return (
     <View style={styles.container}>
+      {/* Filter Modal */}
+      <Modal
+        visible={filterVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setFilterVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Filter Products</Text>
+            <View style={styles.filterRow}>
+              <Text style={styles.filterLabel}>Min Price:</Text>
+              <TextInput
+                style={styles.filterInput}
+                value={minPrice}
+                onChangeText={handleMinPrice}
+                placeholder="0"
+                keyboardType="numeric"
+                maxLength={8}
+              />
+            </View>
+            <View style={styles.filterRow}>
+              <Text style={styles.filterLabel}>Max Price:</Text>
+              <TextInput
+                style={styles.filterInput}
+                value={maxPrice}
+                onChangeText={handleMaxPrice}
+                placeholder="1000"
+                keyboardType="numeric"
+                maxLength={8}
+              />
+            </View>
+            <View style={styles.filterRow}>
+              <Text style={styles.filterLabel}>Sort by Price:</Text>
+              <TouchableOpacity
+                style={[styles.sortButton, sortOrder === 'asc' && styles.sortButtonActive]}
+                onPress={() => setSortOrder('asc')}
+              >
+                <Text style={styles.sortButtonText}>Low to High</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sortButton, sortOrder === 'desc' && styles.sortButtonActive]}
+                onPress={() => setSortOrder('desc')}
+              >
+                <Text style={styles.sortButtonText}>High to Low</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.filterActions}>
+              <Pressable
+                style={[styles.applyButton, !filterChanged && { opacity: 0.5 }]}
+                onPress={async () => {
+                  if (!filterChanged) return;
+                  setApplyingFilter(true);
+                  Keyboard.dismiss();
+                  setPage(1);
+                  setAllProducts([]);
+                  await fetchAllProducts(1, searchQuery, minPrice, maxPrice, sortOrder);
+                  setLastFilter({ minPrice, maxPrice, sortOrder });
+                  setApplyingFilter(false);
+                  setFilterVisible(false);
+                }}
+                disabled={!filterChanged || applyingFilter}
+              >
+                {applyingFilter ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.applyButtonText}>Apply Filter</Text>
+                )}
+              </Pressable>
+              <Pressable
+                style={styles.cancelButton}
+                onPress={() => setFilterVisible(false)}
+                disabled={applyingFilter}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </Pressable>
+            </View>
+            <Pressable
+              style={styles.clearButton}
+              onPress={() => {
+                setMinPrice('');
+                setMaxPrice('');
+                setSortOrder('asc');
+              }}
+              disabled={applyingFilter}
+            >
+              <Text style={styles.clearButtonText}>Clear Filters</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+      {/* End Filter Modal */}
       <FlatList
         data={activeCategory ? products : allProducts}
         keyExtractor={(item, index) => `${item._id}-${index}`}
@@ -346,8 +474,16 @@ export default function HomeScreen() {
             <ActivityIndicator size="small" style={{ marginVertical: 20 }} />
           ) : null
         }
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 16 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }}
       />
+      <TouchableOpacity
+        style={styles.filterButton}
+        onPress={() => setFilterVisible(true)}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="filter" size={22} color="#fff" style={{ marginRight: 6 }} />
+        <Text style={styles.filterButtonText}>Filter Products</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -533,5 +669,121 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 13,
     textAlign: 'center',
+  },
+  filterButton: {
+    position: 'absolute',
+    flexDirection: 'row',
+    alignItems: 'center',
+    right: 20,
+    bottom: 24,
+    backgroundColor: '#4a90e2',
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+  },
+  filterButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'stretch',
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 18,
+    color: '#4a90e2',
+    textAlign: 'center',
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  filterLabel: {
+    width: 90,
+    fontSize: 16,
+    color: '#333',
+  },
+  filterInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    height: 40,
+    fontSize: 16,
+    backgroundColor: '#f7f7f7',
+  },
+  sortButton: {
+    marginLeft: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#eee',
+  },
+  sortButtonActive: {
+    backgroundColor: '#4a90e2',
+  },
+  sortButtonText: {
+    color: '#333',
+    fontWeight: 'bold',
+  },
+  filterActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 18,
+  },
+  applyButton: {
+    backgroundColor: '#4a90e2',
+    borderRadius: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+  },
+  applyButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  cancelButton: {
+    backgroundColor: '#eee',
+    borderRadius: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+  },
+  cancelButtonText: {
+    color: '#333',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  clearButton: {
+    marginTop: 10,
+    alignSelf: 'center',
+    backgroundColor: '#f3f3f3',
+    borderRadius: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+  },
+  clearButtonText: {
+    color: '#4a90e2',
+    fontWeight: 'bold',
+    fontSize: 15,
   },
 });
