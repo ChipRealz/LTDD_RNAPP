@@ -1,0 +1,537 @@
+import { Ionicons } from '@expo/vector-icons';
+import React, { RefObject, useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import ProductSlideShow from '../components/ProductSlideShow';
+import api from '../utils/api';
+
+interface Product {
+  _id: string;
+  name: string;
+  price: number;
+  image?: string;
+}
+
+interface Category {
+  _id: string;
+  name: string;
+}
+
+interface HeaderProps {
+  search: string;
+  setSearch: (text: string) => void;
+  categories: Category[];
+  activeCategory: string | null;
+  setActiveCategory: (categoryId: string | null) => void;
+  tabListRef: React.RefObject<FlatList>;
+  topProducts: Product[];
+  loadingTop: boolean;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  setPage: (page: number) => void;
+  setAllProducts: (products: Product[]) => void;
+  fetchAllProducts: (page: number, searchText?: string) => void;
+}
+
+// Memoized Header Component
+const HeaderComponent = React.memo(
+  ({
+    search,
+    setSearch,
+    categories,
+    activeCategory,
+    setActiveCategory,
+    tabListRef,
+    topProducts,
+    loadingTop,
+    searchQuery,
+    setSearchQuery,
+    setPage,
+    setAllProducts,
+    fetchAllProducts,
+  }: HeaderProps) => {
+    const [localSearch, setLocalSearch] = useState(search); // Local state for TextInput
+    const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Handle search input with debounce
+    const handleSearch = useCallback(
+      (text: string) => {
+        setLocalSearch(text);
+        setSearch(text); // Update parent search state
+        if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = setTimeout(() => {
+          setSearchQuery(text);
+          setPage(1);
+          if (!activeCategory) {
+            setAllProducts([]);
+          }
+        }, 800);
+      },
+      [setSearch, setSearchQuery, setPage, setAllProducts, activeCategory]
+    );
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+      return () => {
+        if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+      };
+    }, []);
+
+    return (
+      <>
+        <View style={styles.topBar}>
+          <TouchableOpacity>
+            <Ionicons name="arrow-back" size={28} color="#333" />
+          </TouchableOpacity>
+          <View style={styles.searchRow}>
+            <TextInput
+              style={styles.searchBar}
+              placeholder="search"
+              placeholderTextColor="#888"
+              value={localSearch}
+              onChangeText={handleSearch}
+              textAlign="left"
+              multiline={false}
+              maxLength={200}
+              textAlignVertical="center"
+              blurOnSubmit={false}
+              returnKeyType="search"
+              onSubmitEditing={() => {
+                setSearchQuery(localSearch);
+                setPage(1);
+                if (!activeCategory) {
+                  setAllProducts([]);
+                }
+              }}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="default"
+              clearButtonMode="while-editing"
+            />
+          </View>
+          <TouchableOpacity style={styles.iconButton}>
+            <Ionicons name="notifications-outline" size={24} color="#333" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.avatarButton}>
+            <View style={styles.avatar} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ backgroundColor: '#e6f2ff' }}>
+          <FlatList
+            ref={tabListRef}
+            data={categories}
+            keyExtractor={item => item._id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabList}
+            renderItem={({ item, index }) => (
+              <TouchableOpacity
+                style={[styles.tab, activeCategory === item._id && styles.activeTab]}
+                onPress={() => {
+                  if (activeCategory === item._id) {
+                    setActiveCategory(null);
+                    setPage(1);
+                    fetchAllProducts(1, searchQuery);
+                  } else {
+                    setActiveCategory(item._id);
+                  }
+                  if (tabListRef.current) {
+                    tabListRef.current.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
+                  }
+                }}
+              >
+                <Text style={[styles.tabText, activeCategory === item._id && styles.activeTabText]}>
+                  {item.name}
+                </Text>
+              </TouchableOpacity>
+            )}
+            style={styles.tabFlatList}
+            getItemLayout={(_, index) => ({ length: 90, offset: 90 * index, index })}
+          />
+        </View>
+
+        <View style={styles.slideShow}>
+          <ProductSlideShow />
+        </View>
+
+        <View style={styles.top10}>
+          <Text style={styles.sectionText}>10 sản phẩm bán chạy</Text>
+          {loadingTop ? (
+            <ActivityIndicator size="small" style={{ marginTop: 8 }} />
+          ) : (
+            <FlatList
+              data={topProducts}
+              keyExtractor={item => item._id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingVertical: 8 }}
+              renderItem={({ item }) => (
+                <View style={styles.topProductCard}>
+                  {item.image && (
+                    <Image source={{ uri: item.image }} style={styles.topProductImage} />
+                  )}
+                  <Text style={styles.topProductName} numberOfLines={1}>{item.name}</Text>
+                  <Text style={styles.topProductPrice}>${item.price}</Text>
+                </View>
+              )}
+            />
+          )}
+        </View>
+      </>
+    );
+  }
+);
+
+export default function HomeScreen() {
+  // States
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [search, setSearch] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [topProducts, setTopProducts] = useState<Product[]>([]);
+  const [loadingTop, setLoadingTop] = useState(true);
+  
+  // Lazy loading states
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [loadingAll, setLoadingAll] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const ITEMS_PER_PAGE = 10;
+
+  const tabListRef = useRef<FlatList>(null);
+
+  // Fetch categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await api.get('/category');
+        setCategories(res.data);
+        setActiveCategory(null);
+      } catch (e) {
+        setCategories([]);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // Fetch products for selected category
+  useEffect(() => {
+    if (!activeCategory) {
+      setProducts([]);
+      return;
+    }
+    setLoadingProducts(true);
+    const fetchProducts = async () => {
+      try {
+        const params: any = { category: activeCategory };
+        if (searchQuery.trim()) params.search = searchQuery.trim();
+        const res = await api.get('/product', { params });
+        setProducts(res.data);
+      } catch (e) {
+        setProducts([]);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+    fetchProducts();
+  }, [activeCategory, searchQuery]);
+
+  // Fetch top selling products
+  useEffect(() => {
+    const fetchTopProducts = async () => {
+      try {
+        setLoadingTop(true);
+        const res = await api.get('/product/top-selling?limit=10');
+        setTopProducts(res.data);
+      } catch (e) {
+        setTopProducts([]);
+      } finally {
+        setLoadingTop(false);
+      }
+    };
+    fetchTopProducts();
+  }, []);
+
+  // Fetch all products with lazy loading and search
+  const fetchAllProducts = useCallback(
+    async (pageNum: number, searchText: string = '') => {
+      try {
+        setLoadingAll(true);
+        const res = await api.get('/product', {
+          params: {
+            page: pageNum,
+            limit: ITEMS_PER_PAGE,
+            sort: 'price',
+            order: 'asc',
+            search: searchText.trim(),
+          },
+        });
+
+        const newProducts = res.data;
+        if (pageNum === 1) {
+          setAllProducts(newProducts);
+        } else {
+          setAllProducts(prev => {
+            const existingIds = new Set(prev.map((p: Product) => p._id));
+            const uniqueNewProducts = newProducts.filter((p: Product) => !existingIds.has(p._id));
+            return [...prev, ...uniqueNewProducts];
+          });
+        }
+
+        setHasMore(newProducts.length === ITEMS_PER_PAGE);
+      } catch (e) {
+        console.error('Error fetching products:', e);
+      } finally {
+        setLoadingAll(false);
+      }
+    },
+    []
+  );
+
+  // Initial load of all products
+  useEffect(() => {
+    if (!activeCategory) {
+      fetchAllProducts(1, searchQuery);
+    }
+  }, [searchQuery, activeCategory, fetchAllProducts]);
+
+  // Load more products
+  const loadMore = useCallback(() => {
+    if (!loadingAll && hasMore && !activeCategory) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchAllProducts(nextPage, searchQuery);
+    }
+  }, [loadingAll, hasMore, activeCategory, page, fetchAllProducts, searchQuery]);
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={activeCategory ? products : allProducts}
+        keyExtractor={(item, index) => `${item._id}-${index}`}
+        ListHeaderComponent={
+          <HeaderComponent
+            search={search}
+            setSearch={setSearch}
+            categories={categories}
+            activeCategory={activeCategory}
+            setActiveCategory={setActiveCategory}
+            tabListRef={tabListRef as RefObject<FlatList<any>>}
+            topProducts={topProducts}
+            loadingTop={loadingTop}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            setPage={setPage}
+            setAllProducts={setAllProducts}
+            fetchAllProducts={fetchAllProducts}
+          />
+        }
+        renderItem={({ item }) => (
+          <View style={styles.productCard}>
+            {item.image && (
+              <Image source={{ uri: item.image }} style={styles.productImage} />
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={styles.productName}>{item.name}</Text>
+              <Text style={styles.productPrice}>${item.price}</Text>
+            </View>
+          </View>
+        )}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={() =>
+          ((loadingAll || loadingProducts) && (activeCategory ? products.length === 0 : allProducts.length === 0)) ? (
+            <ActivityIndicator size="small" style={{ marginVertical: 20 }} />
+          ) : null
+        }
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 16 }}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingTop: 40,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  searchRow: {
+    flex: 0,
+    maxWidth: 260,
+    width: '70%',
+    marginHorizontal: 10,
+    marginVertical: 0,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#6fcf97',
+    justifyContent: 'center',
+    height: 48,
+    alignSelf: 'center',
+  },
+  searchBar: {
+    flex: 1,
+    height: 48,
+    backgroundColor: 'transparent',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    borderWidth: 0,
+    color: '#222',
+    textAlign: 'left',
+    paddingVertical: 0,
+  },
+  iconButton: {
+    marginHorizontal: 4,
+  },
+  avatarButton: {
+    marginLeft: 8,
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#4a90e2',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  tabFlatList: {
+    marginBottom: 1.2,
+    backgroundColor: '#fff',
+  },
+  tabList: {
+    paddingVertical: 0,
+    paddingHorizontal: 8,
+    backgroundColor: 'transparent',
+    marginBottom: 0,
+    borderBottomWidth: 0,
+  },
+  tab: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderRadius: 18,
+    backgroundColor: '#fff',
+    marginRight: 10,
+    height: 38,
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  activeTab: {
+    backgroundColor: '#4a90e2',
+    shadowOpacity: 0.12,
+    elevation: 3,
+    transform: [{ scale: 1.08 }],
+  },
+  tabText: {
+    color: '#333',
+    fontWeight: 'bold',
+    fontSize: 15,
+  },
+  activeTabText: {
+    color: '#fff',
+  },
+  slideShow: {
+    height: 350,
+    backgroundColor: '#4a90e2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  top10: {
+    backgroundColor: '#fff',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    minHeight: 100,
+    borderTopWidth: 1,
+    borderTopColor: '#f90',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f90',
+    marginBottom: 8,
+    paddingLeft: 8,
+  },
+  sectionText: {
+    color: '#f90',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  productCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginVertical: 6,
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  productImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: '#f3f3f3',
+  },
+  productName: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginBottom: 4,
+    color: '#222',
+  },
+  productPrice: {
+    color: '#4a90e2',
+    fontWeight: 'bold',
+    fontSize: 15,
+  },
+  topProductCard: {
+    width: 100,
+    backgroundColor: '#f7f7f7',
+    borderRadius: 10,
+    marginRight: 10,
+    alignItems: 'center',
+    padding: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  topProductImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginBottom: 4,
+    backgroundColor: '#e0e0e0',
+  },
+  topProductName: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#222',
+    marginBottom: 2,
+    textAlign: 'center',
+  },
+  topProductPrice: {
+    color: '#4a90e2',
+    fontWeight: 'bold',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+});
