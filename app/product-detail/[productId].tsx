@@ -72,7 +72,7 @@ export default function ProductDetailScreen() {
     <ScrollView contentContainerStyle={styles.container}>
       {/* Top Bar */}
       <View style={styles.detailTopBar}>
-        <TouchableOpacity onPress={() => router.replace('/') /* or router.back() */}>
+        <TouchableOpacity onPress={() => router.replace('/screens/HomeScreen') /* or router.back() */}> 
           <Ionicons name="arrow-back" size={28} color="#333" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.detailCartIcon} onPress={() => router.push('/cart')}>

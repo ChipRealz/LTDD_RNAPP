@@ -187,7 +187,7 @@ export default function HomeScreen() {
   }, []);
 
   // Debounced search handler
-  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+  const searchTimeout = useRef<number | null>(null);
   const handleSearch = (text: string) => {
     setSearch(text);
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
@@ -233,7 +233,7 @@ export default function HomeScreen() {
             clearButtonMode="while-editing"
           />
         </View>
-        <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/cart")}>
+        <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/cart')}>
           <Ionicons name="cart-outline" size={26} color="#333" />
           {typeof cartCount === 'number' && cartCount > 0 && (
             <View style={styles.cartBadge}>
