@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Keyboard, Modal, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ProductSlideShow from '../components/ProductSlideShow';
@@ -182,6 +183,13 @@ const HeaderComponent = React.memo(
   }
 );
 
+// Define the navigation type for the stack
+// Adjust the type if your navigator uses a different name or structure
+type RootStackParamList = {
+  Home: undefined;
+  ProductDetail: { productId: string };
+};
+
 export default function HomeScreen() {
   // States
   const [categories, setCategories] = useState<Category[]>([]);
@@ -207,6 +215,8 @@ export default function HomeScreen() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [applyingFilter, setApplyingFilter] = useState(false);
   const [lastFilter, setLastFilter] = useState({ minPrice: '', maxPrice: '', sortOrder: 'asc' });
+
+  const router = useRouter();
 
   // Fetch categories
   useEffect(() => {
@@ -457,15 +467,17 @@ export default function HomeScreen() {
           />
         }
         renderItem={({ item }) => (
-          <View style={styles.productCard}>
-            {item.image && (
-              <Image source={{ uri: item.image }} style={styles.productImage} />
-            )}
-            <View style={{ flex: 1 }}>
-              <Text style={styles.productName}>{item.name}</Text>
-              <Text style={styles.productPrice}>${item.price}</Text>
+          <TouchableOpacity onPress={() => router.push({ pathname: '/product-detail/[productId]', params: { productId: item._id } })}>
+            <View style={styles.productCard}>
+              {item.image && (
+                <Image source={{ uri: item.image }} style={styles.productImage} />
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.productName}>{item.name}</Text>
+                <Text style={styles.productPrice}>${item.price}</Text>
+              </View>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
