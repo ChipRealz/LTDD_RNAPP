@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useCart } from '../context/CartContext';
 import api from '../utils/api';
 
 interface Product {
@@ -21,7 +22,7 @@ export default function ProductDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
-  const [cartCount, setCartCount] = useState(0);
+  const { cartCount, updateCartCount } = useCart();
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -37,22 +38,12 @@ export default function ProductDetailScreen() {
     fetchProduct();
   }, [productId]);
 
-  useEffect(() => {
-    const fetchCartCount = async () => {
-      try {
-        const res = await api.get('/cart');
-        setCartCount(res.data?.items?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0);
-      } catch {}
-    };
-    fetchCartCount();
-  }, []);
-
   const handleAddToCart = async () => {
     if (!product) return;
     setAdding(true);
     try {
-      // You may need to add authentication headers to api.post
       await api.post('/cart/add', { productId: product._id, quantity });
+      await updateCartCount(); // Update the global cart count
       Alert.alert('Success', 'Product added to cart!');
     } catch (e: any) {
       Alert.alert('Error', e?.response?.data?.message || 'Could not add to cart');

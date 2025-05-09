@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Keyboard, Modal, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ProductSlideShow from '../components/ProductSlideShow';
+import { useCart } from '../context/CartContext';
 import api from '../utils/api';
 
 interface Product {
@@ -40,7 +41,7 @@ export default function HomeScreen() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [applyingFilter, setApplyingFilter] = useState(false);
   const [lastFilter, setLastFilter] = useState({ minPrice: '', maxPrice: '', sortOrder: 'asc' });
-  const [cartCount, setCartCount] = useState(0);
+  const { cartCount } = useCart();
 
   // Fetch categories
   useEffect(() => {
@@ -175,16 +176,6 @@ export default function HomeScreen() {
     const cleaned = text.replace(/[^0-9]/g, '');
     setMaxPrice(cleaned);
   };
-
-  useEffect(() => {
-    const fetchCartCount = async () => {
-      try {
-        const res = await api.get('/cart');
-        setCartCount(res.data?.items?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0);
-      } catch {}
-    };
-    fetchCartCount();
-  }, []);
 
   // Debounced search handler
   const searchTimeout = useRef<number | null>(null);

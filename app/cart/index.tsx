@@ -1,5 +1,8 @@
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useCart } from '../context/CartContext';
 import api from '../utils/api';
 
 interface CartItem {
@@ -16,6 +19,8 @@ export default function CartScreen() {
   const [cart, setCart] = useState<{ items: CartItem[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [checkingOut, setCheckingOut] = useState(false);
+  const { updateCartCount } = useCart();
 
   const fetchCart = async () => {
     setLoading(true);
@@ -37,7 +42,8 @@ export default function CartScreen() {
     setUpdating(true);
     try {
       await api.delete(`/cart/remove/${productId}`);
-      fetchCart();
+      await fetchCart();
+      await updateCartCount();
     } catch (e) {
       Alert.alert('Error', 'Could not remove item');
     } finally {
@@ -45,10 +51,51 @@ export default function CartScreen() {
     }
   };
 
+  const handleCheckout = async () => {
+    if (!cart || cart.items.length === 0) return;
+    
+    setCheckingOut(true);
+    try {
+      // Here you would typically make an API call to process the checkout
+      // For now, we'll just show a success message
+      Alert.alert(
+        'Success',
+        'Your order has been placed successfully!',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Clear the cart after successful checkout
+              router.replace('/screens/HomeScreen');
+            }
+          }
+        ]
+      );
+    } catch (e) {
+      Alert.alert('Error', 'Could not process checkout');
+    } finally {
+      setCheckingOut(false);
+    }
+  };
+
   const total = cart?.items.reduce((sum, item) => sum + item.productId.price * item.quantity, 0) || 0;
 
   if (loading) return <ActivityIndicator style={{ marginTop: 40 }} />;
-  if (!cart || cart.items.length === 0) return <Text style={{ margin: 20 }}>Your cart is empty.</Text>;
+  if (!cart || cart.items.length === 0) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Ionicons name="cart-outline" size={80} color="#ccc" />
+        <Text style={styles.emptyTitle}>Your Cart is Empty</Text>
+        <Text style={styles.emptyText}>Looks like you haven't added any items to your cart yet.</Text>
+        <TouchableOpacity 
+          style={styles.continueShoppingButton}
+          onPress={() => router.replace('/screens/HomeScreen')}
+        >
+          <Text style={styles.continueShoppingText}>Continue Shopping</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -72,7 +119,20 @@ export default function CartScreen() {
         )}
         contentContainerStyle={{ paddingBottom: 24 }}
       />
-      <Text style={styles.total}>Total: ${total}</Text>
+      <View style={styles.checkoutContainer}>
+        <Text style={styles.total}>Total: ${total}</Text>
+        <TouchableOpacity
+          style={[styles.checkoutButton, checkingOut && styles.checkoutButtonDisabled]}
+          onPress={handleCheckout}
+          disabled={checkingOut}
+        >
+          {checkingOut ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.checkoutButtonText}>Checkout</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -124,11 +184,72 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginLeft: 10,
   },
+  checkoutContainer: {
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 16,
+    marginTop: 8,
+  },
   total: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#4a90e2',
     textAlign: 'right',
-    marginTop: 16,
+    marginBottom: 16,
+  },
+  checkoutButton: {
+    backgroundColor: '#4a90e2',
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  checkoutButtonDisabled: {
+    opacity: 0.7,
+  },
+  checkoutButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  emptyContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  continueShoppingButton: {
+    backgroundColor: '#4a90e2',
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  continueShoppingText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 }); 
