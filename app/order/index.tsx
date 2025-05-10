@@ -22,6 +22,7 @@ interface OrderResponse {
     orderStatus: string;
     totalAmount: number;
     orderCreatedAt: string;
+    discount?: number;
   };
 }
 
@@ -37,6 +38,12 @@ export default function OrderScreen() {
   const [paymentMethod, setPaymentMethod] = useState('COD');
   const [note, setNote] = useState('');
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [lastOrderId, setLastOrderId] = useState<string | null>(null);
+  const [lastOrderTotal, setLastOrderTotal] = useState<number | null>(null);
+  const [promoCode, setPromoCode] = useState('');
+  const [usePoints, setUsePoints] = useState('');
+  const [discountApplied, setDiscountApplied] = useState<number | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
 
   const { updateCartCount } = useCart();
 
@@ -75,13 +82,17 @@ export default function OrderScreen() {
       console.log('Request Payload:', {
         paymentMethod,
         shippingInfo,
-        note
+        note,
+        promotionCode: promoCode || undefined,
+        usePoints: usePoints ? Number(usePoints) : undefined,
       });
 
       const response = await api.post<OrderResponse>('/order', {
         paymentMethod,
         shippingInfo,
-        note
+        note,
+        promotionCode: promoCode || undefined,
+        usePoints: usePoints ? Number(usePoints) : undefined,
       });
 
       console.log('Response Status:', response.status);
@@ -92,6 +103,9 @@ export default function OrderScreen() {
       if (response.data.success) {
         await updateCartCount();
         setOrderSuccess(true);
+        setLastOrderId(response.data.order._id);
+        setLastOrderTotal(response.data.order.totalAmount);
+        setDiscountApplied(response.data.order.discount || 0);
         setTimeout(() => {
           router.replace('/screens/HomeScreen');
         }, 5000);
@@ -272,6 +286,29 @@ export default function OrderScreen() {
           </TouchableOpacity>
         </View>
 
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Promotion Code (Optional)</Text>
+          <TextInput
+            style={styles.input}
+            value={promoCode}
+            onChangeText={setPromoCode}
+            placeholder="Enter promotion code"
+            placeholderTextColor="#999"
+            autoCapitalize="characters"
+          />
+        </View>
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Points to Use (Optional)</Text>
+          <TextInput
+            style={styles.input}
+            value={usePoints}
+            onChangeText={setUsePoints}
+            placeholder="Enter points"
+            placeholderTextColor="#999"
+            keyboardType="numeric"
+          />
+        </View>
+
         <TouchableOpacity
           style={[
             styles.placeOrderButton,
@@ -288,11 +325,15 @@ export default function OrderScreen() {
         </TouchableOpacity>
       </View>
       {orderSuccess && (
-        <View style={styles.successOverlay} pointerEvents="none">
+        <View style={styles.successOverlay} pointerEvents="auto">
           <View style={styles.successBox}>
             <Ionicons name="checkmark-circle" size={64} color="#4CAF50" style={{ marginBottom: 16 }} />
             <Text style={styles.successTitle}>Order Placed!</Text>
-            <Text style={styles.successText}>Your order has been placed successfully. Redirecting to home...</Text>
+            <Text style={styles.successText}>Your order has been placed successfully.</Text>
+            <Text style={{ color: '#4a90e2', marginTop: 8 }}>
+              {(discountApplied ?? 0) > 0 ? `Discount applied: $${discountApplied} | Final total: $${lastOrderTotal}` : `Total: $${lastOrderTotal}`}
+            </Text>
+            <Text style={[styles.successText, { marginTop: 16 }]}>You will be redirected to home shortly.</Text>
           </View>
         </View>
       )}
