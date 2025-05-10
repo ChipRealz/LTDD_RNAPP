@@ -211,7 +211,7 @@ export default function ProductDetailScreen() {
         )}
         <TouchableOpacity
           style={{ marginTop: 16, alignSelf: 'flex-end', backgroundColor: '#eee', borderRadius: 8, padding: 8 }}
-          onPress={() => router.push({ pathname: '/comment-product/[productId]', params: { productId } })}
+          onPress={() => router.push(`/comment-product/${productId}` as any)}
         >
           <Text style={{ color: '#4a90e2', fontWeight: 'bold' }}>Leave a Comment</Text>
         </TouchableOpacity>
