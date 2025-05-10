@@ -13,10 +13,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const updateCartCount = async () => {
     try {
+      if (!global.authToken) {
+        console.log('No auth token found');
+        setCartCount(0);
+        return;
+      }
       const res = await api.get('/cart');
       setCartCount(res.data?.items?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0);
-    } catch (error) {
-      console.error('Error updating cart count:', error);
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        setCartCount(0); // Cart not found, so count is 0
+      } else {
+        console.error('Error updating cart count:', error);
+      }
     }
   };
 
@@ -37,4 +46,6 @@ export function useCart() {
     throw new Error('useCart must be used within a CartProvider');
   }
   return context;
-} 
+}
+
+export default CartProvider; 

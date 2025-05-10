@@ -12,6 +12,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="cart/index" options={{ headerShown: false }} />
         <Stack.Screen name="product-detail/[productId]" options={{ headerShown: false }} />
+        <Stack.Screen name="order/index" options={{ headerShown: false }} />
       </Stack>
     </CartProvider>
   );

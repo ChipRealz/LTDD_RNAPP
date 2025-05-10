@@ -51,31 +51,9 @@ export default function CartScreen() {
     }
   };
 
-  const handleCheckout = async () => {
+  const handleCheckout = () => {
     if (!cart || cart.items.length === 0) return;
-    
-    setCheckingOut(true);
-    try {
-      // Here you would typically make an API call to process the checkout
-      // For now, we'll just show a success message
-      Alert.alert(
-        'Success',
-        'Your order has been placed successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Clear the cart after successful checkout
-              router.replace('/screens/HomeScreen');
-            }
-          }
-        ]
-      );
-    } catch (e) {
-      Alert.alert('Error', 'Could not process checkout');
-    } finally {
-      setCheckingOut(false);
-    }
+    router.push('/order');
   };
 
   const total = cart?.items.reduce((sum, item) => sum + item.productId.price * item.quantity, 0) || 0;
