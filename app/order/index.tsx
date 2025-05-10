@@ -37,6 +37,7 @@ export default function OrderScreen() {
   const [paymentMethod, setPaymentMethod] = useState('COD');
   const [note, setNote] = useState('');
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [promotionCode, setPromotionCode] = useState('');
 
   const { updateCartCount } = useCart();
 
@@ -75,14 +76,18 @@ export default function OrderScreen() {
       console.log('Request Payload:', {
         paymentMethod,
         shippingInfo,
-        note
+        note,
+        promotionCode
       });
 
-      const response = await api.post<OrderResponse>('/order', {
+      const orderPayload: any = {
         paymentMethod,
         shippingInfo,
-        note
-      });
+        note,
+      };
+      if (promotionCode) orderPayload.promotionCode = promotionCode;
+
+      const response = await api.post<OrderResponse>('/order', orderPayload);
 
       console.log('Response Status:', response.status);
       console.log('Response Headers:', response.headers);
@@ -220,6 +225,18 @@ export default function OrderScreen() {
             placeholderTextColor="#999"
             multiline
             numberOfLines={3}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Promotion Code (Optional)</Text>
+          <TextInput
+            style={styles.input}
+            value={promotionCode}
+            onChangeText={setPromotionCode}
+            placeholder="Enter promotion code"
+            placeholderTextColor="#999"
+            autoCapitalize="characters"
           />
         </View>
 
