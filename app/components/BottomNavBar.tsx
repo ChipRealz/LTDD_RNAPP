@@ -3,7 +3,8 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-export default function BottomNavBar({ active }: { active: 'home' | 'orders' | 'review' | 'favorites' | 'recently' }) {
+type NavBarActive = 'home' | 'orders' | 'review' | 'favorites' | 'recently' | 'notification';
+export default function BottomNavBar({ active }: { active: NavBarActive }) {
   const router = useRouter();
   return (
     <View style={styles.bottomNav}>
@@ -45,6 +46,13 @@ export default function BottomNavBar({ active }: { active: 'home' | 'orders' | '
         <Ionicons name="star" size={24} color={active === 'review' ? '#4a90e2' : '#888'} />
         <Text style={[styles.navText, active === 'review' && { color: '#4a90e2', fontWeight: 'bold' }]}>Review</Text>
       </TouchableOpacity>
+      
+      <TouchableOpacity style={styles.navButton} 
+      // @ts-ignore 
+      onPress={() => router.replace('/notification')}>
+        <Ionicons name="notifications-outline" size={28} color={active === 'notification' ? '#4a90e2' : '#888'} />
+        <Text style={[styles.navText, active === 'notification' && { color: '#4a90e2', fontWeight: 'bold' }]}>Noti</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -73,5 +81,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#888',
     marginTop: 2,
+  },
+  navItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  label: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+  },
+  activeLabel: {
+    fontWeight: 'bold',
   },
 }); 
