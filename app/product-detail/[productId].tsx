@@ -3,6 +3,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import ProductStats from '../components/ProductStats';
+import SimilarProducts from '../components/SimilarProducts';
 import { useCart } from '../context/CartContext';
 import api from '../utils/api';
 
@@ -34,6 +36,7 @@ export default function ProductDetailScreen() {
   const { cartCount, updateCartCount } = useCart();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [comments, setComments] = useState<any[]>([]);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -60,6 +63,26 @@ export default function ProductDetailScreen() {
     }, [productId])
   );
 
+  useEffect(() => {
+    // Check if this product is in favorites
+    api.get('/product-features/favorite').then(res => {
+      setIsFavorite(res.data.some((fav: { productId: { _id: string } }) => fav.productId._id === productId));
+    });
+  }, [productId]);
+
+  useEffect(() => {
+    if (productId) {
+      api.post(`/product-features/viewed/${productId}`)
+        .then(() => {
+          // Optionally log for debugging
+          console.log('Viewed product recorded:', productId);
+        })
+        .catch(err => {
+          console.error('Failed to record viewed product:', err);
+        });
+    }
+  }, [productId]);
+
   const handleAddToCart = async () => {
     if (!product) return;
     setAdding(true);
@@ -71,6 +94,16 @@ export default function ProductDetailScreen() {
       Alert.alert('Error', e?.response?.data?.message || 'Could not add to cart');
     } finally {
       setAdding(false);
+    }
+  };
+
+  const toggleFavorite = async () => {
+    if (isFavorite) {
+      await api.delete(`/product-features/favorite/${productId}`);
+      setIsFavorite(false);
+    } else {
+      await api.post(`/product-features/favorite/${productId}`);
+      setIsFavorite(true);
     }
   };
 
@@ -186,6 +219,11 @@ export default function ProductDetailScreen() {
       >
         <Text style={styles.addCartBtnText}>{adding ? 'Adding...' : 'Add to Cart'}</Text>
       </TouchableOpacity>
+      <TouchableOpacity onPress={toggleFavorite}>
+        <Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={28} color="#e74c3c" />
+      </TouchableOpacity>
+      <ProductStats productId={productId as string} />
+      <SimilarProducts productId={productId as string} />
     </ScrollView>
   );
 }

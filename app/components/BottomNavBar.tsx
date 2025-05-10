@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-export default function BottomNavBar({ active }: { active: 'home' | 'orders' | 'review' }) {
+export default function BottomNavBar({ active }: { active: 'home' | 'orders' | 'review' | 'favorites' | 'recently' }) {
   const router = useRouter();
   return (
     <View style={styles.bottomNav}>
@@ -24,6 +24,22 @@ export default function BottomNavBar({ active }: { active: 'home' | 'orders' | '
       <TouchableOpacity
         style={styles.navButton}
         // @ts-ignore
+        onPress={() => router.replace('/favorites')}
+      >
+        <Ionicons name="heart" size={24} color={active === 'favorites' ? '#e74c3c' : '#888'} />
+        <Text style={[styles.navText, active === 'favorites' && { color: '#e74c3c', fontWeight: 'bold' }]}>Favorites</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.navButton}
+        // @ts-ignore
+        onPress={() => router.replace('/recently-viewed')}
+      >
+        <Ionicons name="time" size={24} color={active === 'recently' ? '#4a90e2' : '#888'} />
+        <Text style={[styles.navText, active === 'recently' && { color: '#4a90e2', fontWeight: 'bold' }]}>Recent</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.navButton}  
+        // @ts-ignore 
         onPress={() => router.replace('/review-product')}
       >
         <Ionicons name="star" size={24} color={active === 'review' ? '#4a90e2' : '#888'} />
