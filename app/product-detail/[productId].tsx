@@ -121,14 +121,19 @@ export default function ProductDetailScreen() {
         <TouchableOpacity onPress={() => router.replace('/screens/HomeScreen') /* or router.back() */}> 
           <Ionicons name="arrow-back" size={28} color="#333" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.detailCartIcon} onPress={() => router.push('/cart')}>
-          <Ionicons name="cart-outline" size={26} color="#333" />
-          {cartCount > 0 && (
-            <View style={styles.cartBadge}>
-              <Text style={styles.cartBadgeText}>{cartCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity onPress={toggleFavorite} style={{ marginRight: 12 }}>
+            <Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={28} color="#e74c3c" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.detailCartIcon} onPress={() => router.push('/cart')}>
+            <Ionicons name="cart-outline" size={26} color="#333" />
+            {cartCount > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{cartCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
       {product.image && (
         <Image source={{ uri: product.image }} style={styles.image} />
@@ -218,9 +223,6 @@ export default function ProductDetailScreen() {
         disabled={adding}
       >
         <Text style={styles.addCartBtnText}>{adding ? 'Adding...' : 'Add to Cart'}</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={toggleFavorite}>
-        <Ionicons name={isFavorite ? 'heart' : 'heart-outline'} size={28} color="#e74c3c" />
       </TouchableOpacity>
       <ProductStats productId={productId as string} />
       <SimilarProducts productId={productId as string} />
