@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-export default function BottomNavBar({ active }: { active: 'home' | 'orders' }) {
+export default function BottomNavBar({ active }: { active: 'home' | 'orders' | 'review' }) {
   const router = useRouter();
   return (
     <View style={styles.bottomNav}>
@@ -20,6 +20,13 @@ export default function BottomNavBar({ active }: { active: 'home' | 'orders' }) 
       >
         <Ionicons name="list" size={24} color={active === 'orders' ? '#4a90e2' : '#888'} />
         <Text style={[styles.navText, active === 'orders' && { color: '#4a90e2', fontWeight: 'bold' }]}>Orders</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.navButton}
+        onPress={() => router.replace('/review-product')}
+      >
+        <Ionicons name="star" size={24} color={active === 'review' ? '#4a90e2' : '#888'} />
+        <Text style={[styles.navText, active === 'review' && { color: '#4a90e2', fontWeight: 'bold' }]}>Review</Text>
       </TouchableOpacity>
     </View>
   );

@@ -15,6 +15,14 @@ interface Product {
   stockQuantity?: number;
 }
 
+interface Review {
+  _id: string;
+  userId: { name: string };
+  rating: number;
+  comment: string;
+  createdAt?: string;
+}
+
 export default function ProductDetailScreen() {
   const { productId } = useLocalSearchParams();
   const router = useRouter();
@@ -23,6 +31,7 @@ export default function ProductDetailScreen() {
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
   const { cartCount, updateCartCount } = useCart();
+  const [reviews, setReviews] = useState<Review[]>([]);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -36,6 +45,8 @@ export default function ProductDetailScreen() {
       }
     };
     fetchProduct();
+    // Fetch reviews for this product
+    api.get(`/review/${productId}`).then(res => setReviews(res.data));
   }, [productId]);
 
   const handleAddToCart = async () => {
@@ -104,6 +115,35 @@ export default function ProductDetailScreen() {
         >
           <Text style={styles.qtyBtnText}>+</Text>
         </TouchableOpacity>
+      </View>
+      {/* --- REVIEWS SECTION --- */}
+      <View style={{ width: '100%', marginTop: 32 }}>
+        <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 8 }}>Reviews</Text>
+        {reviews.length === 0 ? (
+          <Text>No reviews yet.</Text>
+        ) : (
+          reviews.map(r => (
+            <View key={r._id} style={{ marginVertical: 8, backgroundColor: '#f9f9f9', borderRadius: 8, padding: 10 }}>
+              <Text style={{ fontWeight: 'bold' }}>{r.userId?.name || 'User'}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 2 }}>
+                {[1,2,3,4,5].map(num => (
+                  <Ionicons
+                    key={num}
+                    name={num <= r.rating ? 'star' : 'star-outline'}
+                    size={18}
+                    color="#f9a825"
+                  />
+                ))}
+                {r.createdAt && (
+                  <Text style={{ marginLeft: 8, color: '#888', fontSize: 12 }}>
+                    {new Date(r.createdAt).toLocaleDateString()}
+                  </Text>
+                )}
+              </View>
+              <Text>{r.comment}</Text>
+            </View>
+          ))
+        )}
       </View>
       {/* Add to Cart Button */}
       <TouchableOpacity
