@@ -23,6 +23,7 @@ export default function BottomNavBar({ active }: { active: 'home' | 'orders' | '
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.navButton}
+        // @ts-ignore
         onPress={() => router.replace('/review-product')}
       >
         <Ionicons name="star" size={24} color={active === 'review' ? '#4a90e2' : '#888'} />
