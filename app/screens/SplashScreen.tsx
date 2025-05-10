@@ -9,7 +9,7 @@ declare global {
 
 export default function SplashScreen() {
   const router = useRouter();
-  const [timeLeft, setTimeLeft] = useState(3); // Shorten for dev
+  const [timeLeft, setTimeLeft] = useState(5); // Shorten for dev
   const [shouldNavigate, setShouldNavigate] = useState(false);
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function SplashScreen() {
       </TouchableOpacity>
       
       <View style={styles.content}>
-        <Text style={styles.title}>Welcome to LTDD</Text>
+        <Text style={styles.title}>Welcome to E-commerce</Text>
         <Text style={styles.timer}>Auto redirect in {timeLeft}s</Text>
       </View>
     </View>
