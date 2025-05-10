@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Keyboard, Modal, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import BottomNavBar from '../components/BottomNavBar';
 import ProductSlideShow from '../components/ProductSlideShow';
 import { useCart } from '../context/CartContext';
 import { useUser } from '../context/UserContext';
@@ -428,13 +429,14 @@ export default function HomeScreen() {
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }}
       />
       <TouchableOpacity
-        style={styles.filterButton}
+        style={[styles.filterButton, { marginBottom: 40 }]}
         onPress={() => setFilterVisible(true)}
         activeOpacity={0.8}
       >
         <Ionicons name="filter" size={22} color="#fff" style={{ marginRight: 6 }} />
         <Text style={styles.filterButtonText}>Filter Products</Text>
       </TouchableOpacity>
+      <BottomNavBar active="home" />
     </View>
   );
 }

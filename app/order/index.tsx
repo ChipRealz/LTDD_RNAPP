@@ -36,6 +36,7 @@ export default function OrderScreen() {
   });
   const [paymentMethod, setPaymentMethod] = useState('COD');
   const [note, setNote] = useState('');
+  const [orderSuccess, setOrderSuccess] = useState(false);
 
   const { updateCartCount } = useCart();
 
@@ -89,25 +90,11 @@ export default function OrderScreen() {
       console.log('=== End Debug ===');
 
       if (response.data.success) {
-        await updateCartCount(); // Update cart count after successful order
-        Alert.alert(
-          'Success',
-          'Your order has been placed successfully!',
-          [
-            {
-              text: 'View Order',
-              onPress: () => router.push({
-                pathname: '/order-detail/[orderId]',
-                params: { orderId: response.data.order._id }
-              }),
-            },
-            {
-              text: 'Continue Shopping',
-              onPress: () => router.replace('/screens/HomeScreen'),
-              style: 'cancel',
-            },
-          ]
-        );
+        await updateCartCount();
+        setOrderSuccess(true);
+        setTimeout(() => {
+          router.replace('/screens/HomeScreen');
+        }, 5000);
       }
     } catch (error: any) {
       console.error('=== Order Placement Error Debug ===');
@@ -156,16 +143,15 @@ export default function OrderScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+    <ScrollView style={styles.container} scrollEnabled={!orderSuccess}>
+      <View style={styles.header} pointerEvents={orderSuccess ? 'none' : 'auto'}>
+        <TouchableOpacity onPress={() => router.back()} disabled={orderSuccess}>
           <Ionicons name="arrow-back" size={28} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Place Order</Text>
         <View style={{ width: 28 }} />
       </View>
-
-      <View style={styles.formContainer}>
+      <View style={styles.formContainer} pointerEvents={orderSuccess ? 'none' : 'auto'}>
         <Text style={styles.sectionTitle}>Shipping Information</Text>
         
         <View style={styles.inputGroup}>
@@ -238,13 +224,14 @@ export default function OrderScreen() {
         </View>
 
         <Text style={styles.sectionTitle}>Payment Method</Text>
-        <View style={styles.paymentOptions}>
+        <View style={styles.paymentOptions} pointerEvents={orderSuccess ? 'none' : 'auto'}>
           <TouchableOpacity
             style={[
               styles.paymentOption,
               paymentMethod === 'COD' && styles.paymentOptionSelected,
             ]}
             onPress={() => setPaymentMethod('COD')}
+            disabled={orderSuccess}
           >
             <Ionicons
               name="cash-outline"
@@ -267,6 +254,7 @@ export default function OrderScreen() {
               paymentMethod === 'ONLINE' && styles.paymentOptionSelected,
             ]}
             onPress={() => setPaymentMethod('ONLINE')}
+            disabled={orderSuccess}
           >
             <Ionicons
               name="card-outline"
@@ -285,9 +273,12 @@ export default function OrderScreen() {
         </View>
 
         <TouchableOpacity
-          style={[styles.placeOrderButton, loading && styles.placeOrderButtonDisabled]}
+          style={[
+            styles.placeOrderButton,
+            (loading || orderSuccess) && styles.placeOrderButtonDisabled,
+          ]}
           onPress={handlePlaceOrder}
-          disabled={loading}
+          disabled={loading || orderSuccess}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
@@ -296,6 +287,15 @@ export default function OrderScreen() {
           )}
         </TouchableOpacity>
       </View>
+      {orderSuccess && (
+        <View style={styles.successOverlay} pointerEvents="none">
+          <View style={styles.successBox}>
+            <Ionicons name="checkmark-circle" size={64} color="#4CAF50" style={{ marginBottom: 16 }} />
+            <Text style={styles.successTitle}>Order Placed!</Text>
+            <Text style={styles.successText}>Your order has been placed successfully. Redirecting to home...</Text>
+          </View>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -397,5 +397,38 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 18,
+  },
+  successOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  successBox: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  successTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+    marginBottom: 8,
+  },
+  successText: {
+    fontSize: 16,
+    color: '#333',
+    textAlign: 'center',
   },
 }); 

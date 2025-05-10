@@ -50,9 +50,31 @@ export default function OrderDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
 
+  const statusMap: Record<string, string> = {
+    PENDING: 'Pending',
+    SUCCESS: 'Success',
+    FAILED: 'Failed',
+    CANCELED: 'Canceled',
+    DELIVERED: 'Delivered',
+    NEW: 'New',
+    CONFIRMED: 'Confirmed',
+    PREPARING: 'Preparing',
+    DELIVERING: 'Delivering',
+    CANCELREQUESTED: 'Cancel Requested',
+  };
+
   useEffect(() => {
     api.get(`/order/my-orders/${orderId}`)
-      .then(res => setOrder(res.data.order))
+      .then(res => {
+        const backendOrder = res.data.order;
+        // Map backend fields to frontend expected fields
+        const mappedOrder = {
+          ...backendOrder,
+          orderStatus: backendOrder.status || backendOrder.orderStatus,
+          orderCreatedAt: backendOrder.createdAt || backendOrder.orderCreatedAt,
+        };
+        setOrder(mappedOrder);
+      })
       .catch(err => {
         if (err.response?.status === 403) {
           Alert.alert('Unauthorized', 'You are not allowed to view this order.');
@@ -120,8 +142,25 @@ export default function OrderDetailScreen() {
   if (loading) return <ActivityIndicator style={{ marginTop: 40 }} />;
   if (!order) return <Text style={{ margin: 20 }}>Order not found.</Text>;
 
+  // Log order status for debugging (not in JSX)
+  console.log('Order status from backend:', order.orderStatus);
+
   const canCancel = order.orderStatus === 'new' && 
     (new Date().getTime() - new Date(order.orderCreatedAt).getTime()) <= 30 * 60 * 1000;
+
+  // Helper to get user-friendly status
+  const getDisplayStatus = (status: string) => {
+    if (!status) return 'Unknown';
+    const key = status.trim().toUpperCase();
+    return statusMap[key] || key.charAt(0) + key.slice(1).toLowerCase() || 'Unknown';
+  };
+
+  // Helper to format date safely
+  const getDisplayDate = (dateStr: string) => {
+    if (!dateStr) return 'Unknown';
+    const date = new Date(dateStr);
+    return isNaN(date.getTime()) ? 'Unknown' : date.toLocaleString();
+  };
 
   return (
     <FlatList
@@ -146,9 +185,9 @@ export default function OrderDetailScreen() {
           </View>
           <View style={styles.content}>
             <Text style={styles.header}>Order #{order.orderNumber || order._id}</Text>
-            <Text style={styles.section}>Status: {(order.orderStatus || 'unknown').toUpperCase()}</Text>
+            <Text style={styles.section}>Status: {getDisplayStatus(order.orderStatus)}</Text>
             <Text style={styles.section}>Total: ${order.totalAmount}</Text>
-            <Text style={styles.section}>Date: {new Date(order.orderCreatedAt).toLocaleString()}</Text>
+            <Text style={styles.section}>Date: {getDisplayDate(order.orderCreatedAt)}</Text>
             <Text style={styles.section}>Shipping Info</Text>
             <Text style={styles.infoText}>Name: {order.shippingInfo?.name}</Text>
             <Text style={styles.infoText}>Phone: {order.shippingInfo?.phone}</Text>
