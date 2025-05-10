@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-type NavBarActive = 'home' | 'orders' | 'review' | 'favorites' | 'recently' | 'notification';
+type NavBarActive = 'home' | 'orders' | 'review' | 'favorites' | 'recently' | 'notification' | 'chatbot';
 export default function BottomNavBar({ active }: { active: NavBarActive }) {
   const router = useRouter();
   return (
@@ -52,6 +52,13 @@ export default function BottomNavBar({ active }: { active: NavBarActive }) {
       onPress={() => router.replace('/notification')}>
         <Ionicons name="notifications-outline" size={28} color={active === 'notification' ? '#4a90e2' : '#888'} />
         <Text style={[styles.navText, active === 'notification' && { color: '#4a90e2', fontWeight: 'bold' }]}>Noti</Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity style={styles.navButton} 
+      // @ts-ignore
+      onPress={() => router.push('/chatbot')}>
+        <Ionicons name="chatbubble-ellipses-outline" size={28} color={active === 'chatbot' ? '#4a90e2' : '#888'} />
+        <Text style={[styles.navText, active === 'chatbot' && { color: '#4a90e2', fontWeight: 'bold' }]}>Chatbot</Text>
       </TouchableOpacity>
     </View>
   );
