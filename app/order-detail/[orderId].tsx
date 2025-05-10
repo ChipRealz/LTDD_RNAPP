@@ -56,7 +56,7 @@ export default function OrderDetailScreen() {
       .catch(err => {
         if (err.response?.status === 403) {
           Alert.alert('Unauthorized', 'You are not allowed to view this order.');
-          router.replace({ pathname: '/order-history/index' });
+          router.replace('/order-history');
         } else {
           console.error(err);
         }

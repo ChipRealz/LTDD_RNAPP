@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Keyboard, Modal, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ProductSlideShow from '../components/ProductSlideShow';
 import { useCart } from '../context/CartContext';
+import { useUser } from '../context/UserContext';
 import api from '../utils/api';
 
 interface Product {
@@ -42,6 +43,7 @@ export default function HomeScreen() {
   const [applyingFilter, setApplyingFilter] = useState(false);
   const [lastFilter, setLastFilter] = useState({ minPrice: '', maxPrice: '', sortOrder: 'asc' });
   const { cartCount } = useCart();
+  const { userImage } = useUser();
 
   // Fetch categories
   useEffect(() => {
@@ -232,8 +234,12 @@ export default function HomeScreen() {
             </View>
           )}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.avatarButton}>
-          <View style={styles.avatar} />
+        <TouchableOpacity style={styles.avatarButton} onPress={() => router.push('/screens/ProfileScreen')}>
+          {userImage ? (
+            <Image source={{ uri: userImage }} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatar} />
+          )}
         </TouchableOpacity>
       </View>
 
