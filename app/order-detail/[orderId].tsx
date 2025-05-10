@@ -145,7 +145,7 @@ export default function OrderDetailScreen() {
   // Log order status for debugging (not in JSX)
   console.log('Order status from backend:', order.orderStatus);
 
-  const canCancel = order.orderStatus === 'new' && 
+  const canCancel = order.orderStatus?.toLowerCase() === 'new' && 
     (new Date().getTime() - new Date(order.orderCreatedAt).getTime()) <= 30 * 60 * 1000;
 
   // Helper to get user-friendly status
@@ -211,6 +211,11 @@ export default function OrderDetailScreen() {
           <View style={styles.infoCard}>
             <Text style={styles.infoText}>Payment Method: {order.paymentMethod}</Text>
           </View>
+          {!canCancel && (
+            <Text style={{ color: '#888', fontStyle: 'italic', marginTop: 8, textAlign: 'center' }}>
+              You can only cancel within 30 minutes of placing the order while the order is NEW.
+            </Text>
+          )}
           {canCancel && (
             <TouchableOpacity
               style={[styles.cancelButton, canceling && styles.cancelButtonDisabled]}
