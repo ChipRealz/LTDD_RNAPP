@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import BottomNavBar from '../components/BottomNavBar';
 import api from '../utils/api';
 
 type Order = {
@@ -27,6 +28,7 @@ export default function OrderHistoryScreen() {
     return (
       <View style={styles.centered}>
         <Text style={styles.emptyText}>You have no orders yet.</Text>
+        <BottomNavBar active="orders" />
       </View>
     );
   }
@@ -48,6 +50,7 @@ export default function OrderHistoryScreen() {
           </TouchableOpacity>
         )}
       />
+      <BottomNavBar active="orders" />
     </View>
   );
 }
