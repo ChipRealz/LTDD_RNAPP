@@ -32,6 +32,7 @@ export default function ProductDetailScreen() {
   const [adding, setAdding] = useState(false);
   const { cartCount, updateCartCount } = useCart();
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [comments, setComments] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -47,6 +48,7 @@ export default function ProductDetailScreen() {
     fetchProduct();
     // Fetch reviews for this product
     api.get(`/review/${productId}`).then(res => setReviews(res.data));
+    api.get(`/review/comment/${productId}`).then(res => setComments(res.data));
   }, [productId]);
 
   const handleAddToCart = async () => {
@@ -144,6 +146,28 @@ export default function ProductDetailScreen() {
             </View>
           ))
         )}
+      </View>
+      {/* --- DIVIDER --- */}
+      <View style={{ width: '100%', height: 1, backgroundColor: '#eee', marginVertical: 24 }} />
+      {/* --- COMMENTS SECTION --- */}
+      <View style={{ width: '100%', marginBottom: 16 }}>
+        <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 8 }}>Comments</Text>
+        {comments.length === 0 ? (
+          <Text>No comments yet.</Text>
+        ) : (
+          comments.map(c => (
+            <View key={c._id} style={{ marginVertical: 6, backgroundColor: '#f3f3f3', borderRadius: 8, padding: 8 }}>
+              <Text style={{ fontWeight: 'bold' }}>{c.userId?.name || 'User'}</Text>
+              <Text>{c.comment}</Text>
+            </View>
+          ))
+        )}
+        <TouchableOpacity
+          style={{ marginTop: 16, alignSelf: 'flex-end', backgroundColor: '#eee', borderRadius: 8, padding: 8 }}
+          onPress={() => router.push({ pathname: '/comment-product/[productId]', params: { productId } })}
+        >
+          <Text style={{ color: '#4a90e2', fontWeight: 'bold' }}>Leave a Comment</Text>
+        </TouchableOpacity>
       </View>
       {/* Add to Cart Button */}
       <TouchableOpacity
