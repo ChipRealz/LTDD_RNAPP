@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -50,6 +51,14 @@ export default function ProductDetailScreen() {
     api.get(`/review/${productId}`).then(res => setReviews(res.data));
     api.get(`/review/comment/${productId}`).then(res => setComments(res.data));
   }, [productId]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      // Fetch product and comments here
+      api.get(`/review/comment/${productId}`).then(res => setComments(res.data));
+      // ...fetch other data if needed...
+    }, [productId])
+  );
 
   const handleAddToCart = async () => {
     if (!product) return;
