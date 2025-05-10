@@ -85,7 +85,7 @@ export default function HomeScreen() {
       try {
         setLoadingTop(true);
         const res = await api.get('/product/top-selling?limit=10');
-        setTopProducts(res.data);
+        setTopProducts(res.data.products);
       } catch (e) {
         setTopProducts([]);
       } finally {
