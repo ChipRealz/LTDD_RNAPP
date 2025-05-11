@@ -11,20 +11,22 @@ export default function ChatbotScreen() {
 
   const sendMessage = async () => {
     if (!input.trim()) return;
-    const userMsg = { from: 'user', text: input };
+    const userMsg = { from: 'user' as const, text: input };
     setMessages(prev => [...prev, userMsg]);
-    setInput('');
-    setLoading(true);
-    try {
-      const res = await api.post('/chatbot', { message: userMsg.text });
-      setMessages(prev => [...prev, { from: 'bot', text: res.data.reply }]);
-    } catch (e: any) {
-      setMessages(prev => [...prev, { from: 'bot', text: 'Sorry, something went wrong.' }]);
-    } finally {
-      setLoading(false);
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
-    }
-  };
+  setInput('');
+  setLoading(true);
+  try {
+    const res = await api.post('/chatbot', { message: userMsg.text });
+-      setMessages(prev => [...prev, { from: 'bot', text: res.data.reply }]);
++      setMessages(prev => [...prev, { from: 'bot' as const, text: res.data.reply }]);
+  } catch (e: any) {
+-      setMessages(prev => [...prev, { from: 'bot', text: 'Sorry, something went wrong.' }]);
++      setMessages(prev => [...prev, { from: 'bot' as const, text: 'Sorry, something went wrong.' }]);
+  } finally {
+    setLoading(false);
+    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+  }
+};
 
   return (
     <View style={styles.container}>
@@ -38,7 +40,7 @@ export default function ChatbotScreen() {
             <Text style={[styles.message, item.from === 'user' ? styles.userMsg : styles.botMsg]}>{item.text}</Text>
           </View>
         )}
-        contentContainerStyle={{ paddingBottom: 80, paddingTop: 8 }}
+        contentContainerStyle={{ paddingBottom: 125, paddingTop: 8 }}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
       />
       {loading && <ActivityIndicator style={{ marginBottom: 70 }} />}
