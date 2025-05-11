@@ -25,15 +25,7 @@ export default function ChatbotScreen() {
       const res = await api.post('/chatbot', { message: userMsg.text });
       setMessages(prev => {
         const next = [...prev, { from: 'bot' as const, text: res.data.reply }];
-        // Only show products if intent is about products
-        const productIntents = [
-          'products', 'trending', 'seasonal', 'complementary', 'category', 'personalized', 'popular', 'similar'
-        ];
-        if (
-          Array.isArray(res.data.products) &&
-          res.data.products.length > 0 &&
-          (productIntents.includes(res.data.type) || res.data.productsIntent)
-        ) {
+        if (Array.isArray(res.data.products) && res.data.products.length > 0) {
           next.push({ from: 'bot', type: 'products', products: res.data.products });
         }
         if (Array.isArray(res.data.orders) && res.data.orders.length > 0) {
