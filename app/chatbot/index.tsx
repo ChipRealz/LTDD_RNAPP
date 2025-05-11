@@ -7,7 +7,8 @@ import api from '../utils/api';
 export default function ChatbotScreen() {
   const [messages, setMessages] = useState<(
     { from: 'user' | 'bot'; text: string } |
-    { from: 'bot'; type: 'products'; products: any[] }
+    { from: 'bot'; type: 'products'; products: any[] } |
+    { from: 'bot'; type: 'orders'; orders: any[] }
   )[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,6 +27,9 @@ export default function ChatbotScreen() {
         const next = [...prev, { from: 'bot' as const, text: res.data.reply }];
         if (Array.isArray(res.data.products) && res.data.products.length > 0) {
           next.push({ from: 'bot', type: 'products', products: res.data.products });
+        }
+        if (Array.isArray(res.data.orders) && res.data.orders.length > 0) {
+          next.push({ from: 'bot', type: 'orders', orders: res.data.orders });
         }
         return next;
       });
@@ -100,6 +104,20 @@ export default function ChatbotScreen() {
               </View>
             );
           }
+          if ('type' in item && item.type === 'orders') {
+            return (
+              <View style={styles.ordersRow}>
+                {item.orders.map((order: any) => (
+                  <View key={order.orderNumber} style={styles.orderCard}>
+                    <Text style={styles.orderNumber}>Order #{order.orderNumber}</Text>
+                    <Text>Status: {order.status}</Text>
+                    <Text>Total: ${order.totalAmount}</Text>
+                    <Text>Date: {new Date(order.createdAt).toLocaleDateString()}</Text>
+                  </View>
+                ))}
+              </View>
+            );
+          }
           return (
             <View style={[styles.messageRow, item.from === 'user' ? styles.userRow : styles.botRow]}>
               <Text style={[styles.message, item.from === 'user' ? styles.userMsg : styles.botMsg]}>{item.text}</Text>
@@ -157,4 +175,7 @@ const styles = StyleSheet.create({
   productDescription: { color: '#444', fontSize: 12, marginBottom: 2 },
   detailsBtn: { marginTop: 8, backgroundColor: '#4a90e2', borderRadius: 6, paddingVertical: 6, paddingHorizontal: 12, alignSelf: 'flex-start' },
   detailsBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  ordersRow: { marginVertical: 8, marginLeft: 12 },
+  orderCard: { backgroundColor: '#f0f0f0', borderRadius: 8, padding: 10, marginBottom: 8, minWidth: 100, maxWidth: 150 },
+  orderNumber: { fontWeight: 'bold', marginBottom: 2 },
 }); 
